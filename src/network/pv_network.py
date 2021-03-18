@@ -28,6 +28,7 @@ class NetworkPV(object):
 
         self.learning_rate = Config.train.LEARNING_RATE
 
+        # was bedeutet diese Graph-Sache hier?
         self.graph = tf.Graph()
         with self.graph.as_default() as g:
             with tf.device(self.device):
@@ -47,9 +48,11 @@ class NetworkPV(object):
                 self.sess.run(tf.global_variables_initializer()) 
                 self.log_writer = tf.summary.FileWriter(self.log_dir, self.sess.graph)
 
+    # 
     def create_placeholder(self):
         self.x = tf.placeholder(
             tf.float32, [None, self.img_height, self.img_width, self.img_channels], name='X')
+        # in den indices wird die eigentliche Anzahl an visits in actions und zugh. value von scores gespeichert    
         self.action_index = tf.placeholder(tf.float32, [None, self.num_actions])
         self.score_index = tf.placeholder(tf.float32, [None, self.num_scores])
         
@@ -58,6 +61,7 @@ class NetworkPV(object):
 
         self.var_learning_rate = tf.placeholder(tf.float32, name='lr', shape=[])
 
+    # create the stucture of the NN
     def create_network(self):
         with tf.variable_scope('NetworkVP'):
             conv1 = tf.layers.conv2d(self.x, Config.network.NUM_RESIDUAL_FILTERS, [Config.network.FILTER_SIZE, Config.network.FILTER_SIZE], strides=(1, 1), padding='SAME')
@@ -115,6 +119,7 @@ class NetworkPV(object):
             flat_p = tf.reshape(conv_final_p, [-1, 2 * self.img_height * self.img_width])
             self.logits_p = tf.layers.dense(flat_p, self.num_actions, activation=None, name='logits_p')
             self.softmax_p = tf.nn.softmax(self.logits_p)
+            # has self.num_actions=32*32*2 outputs --> Prob-Distribution over the possible actions!
             
             # value head
             conv_final_v = tf.layers.conv2d(current_conv, 1, [1, 1], strides=(1, 1), padding='SAME')
@@ -132,12 +137,14 @@ class NetworkPV(object):
             fc1_v = tf.layers.dense(flat_v, 256, activation=tf.nn.relu, name='fc1_v')
             self.logits_v = tf.layers.dense(fc1_v, Config.value.N_SCORE, activation=None, name='logits_v')
             self.softmax_v = tf.nn.softmax(self.logits_v)
+            # has 17 (-8 bis 8) outputs --> Prob-Distribution over the possible values
 
     def create_train_op(self):
+        # initialize an optimizer
         self.opt = tf.train.MomentumOptimizer(
             learning_rate=self.var_learning_rate, momentum=0.9, use_nesterov=True)
 
-        # loss
+        # loss - Compare logits to observations in the tree
         self.cost_p = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.logits_p, labels=self.action_index))
         self.cost_v = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.logits_v, labels=self.score_index))
         # Regularizer
