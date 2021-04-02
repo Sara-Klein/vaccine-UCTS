@@ -220,7 +220,7 @@ class Player(object):
 
         return self.sample_best_action()
 
-    def play_simulation(self, cur_depth, cur_env, cur_node):
+    def play_simulation(self, cur_depth, cur_env, cur_node): 
         is_expanded = False
         if self.root_env.game_state["CurEnd"] != cur_env.game_state["CurEnd"] or cur_depth == self.max_depth:
             return None, False
